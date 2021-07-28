@@ -1,0 +1,234 @@
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: Cluster
+metadata:
+  labels:
+    cni: calico
+  name: capi-workload1
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+    kind: KubeadmControlPlane
+    name: capi-workload1-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    kind: AzureCluster
+    name: capi-workload1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureCluster
+metadata:
+  name: capi-workload1
+  namespace: default
+spec:
+  identityRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    kind: AzureClusterIdentity
+    name: cluster-identity
+  location: australiaeast
+  networkSpec:
+    vnet:
+      name: capi-workload1-vnet
+  resourceGroup: capi-workload1
+  subscriptionID: 7dbcde1b-12c1-412a-9c60-b724c144052e
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+kind: KubeadmControlPlane
+metadata:
+  name: capi-workload1-control-plane
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          audit-log-maxage: "30"
+          audit-log-maxbackup: "10"
+          audit-log-maxsize: "100"
+          audit-log-path: /var/log/kube-apiserver/audit.log
+          audit-policy-file: /etc/kubernetes/audit.yaml
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        extraVolumes:
+        - hostPath: /var/log/kube-apiserver
+          mountPath: /var/log/kube-apiserver
+          name: kubeaudit
+        - hostPath: /etc/kubernetes/audit.yaml
+          mountPath: /etc/kubernetes/audit.yaml
+          name: audit-policy
+          readOnly: true
+        - hostPath: /etc/kubernetes/azure.json
+          mountPath: /etc/kubernetes/azure.json
+          name: cloud-config
+          readOnly: true
+        timeoutForControlPlane: 20m
+      controllerManager:
+        extraArgs:
+          allocate-node-cidrs: "false"
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+          cluster-name: capi-workload1
+        extraVolumes:
+        - hostPath: /etc/kubernetes/azure.json
+          mountPath: /etc/kubernetes/azure.json
+          name: cloud-config
+          readOnly: true
+      etcd:
+        local:
+          dataDir: /var/lib/etcddisk/etcd
+    diskSetup:
+      filesystems:
+      - device: /dev/disk/azure/scsi1/lun0
+        extraOpts:
+        - -E
+        - lazy_itable_init=1,lazy_journal_init=1
+        filesystem: ext4
+        label: etcd_disk
+      - device: ephemeral0.1
+        filesystem: ext4
+        label: ephemeral0
+        replaceFS: ntfs
+      partitions:
+      - device: /dev/disk/azure/scsi1/lun0
+        layout: true
+        overwrite: false
+        tableType: gpt
+    files:
+    - contentFrom:
+        secret:
+          key: control-plane-azure.json
+          name: capi-workload1-control-plane-azure-json
+      owner: root:root
+      path: /etc/kubernetes/azure.json
+      permissions: "0644"
+    - contentFrom:
+        secret:
+          key: audit.yaml
+          name: audit
+      owner: root:root
+      path: /etc/kubernetes/audit.yaml
+      permissions: "0644"
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          azure-container-registry-config: /etc/kubernetes/azure.json
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        name: '{{ ds.meta_data["local_hostname"] }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          azure-container-registry-config: /etc/kubernetes/azure.json
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        name: '{{ ds.meta_data["local_hostname"] }}'
+    mounts:
+    - - LABEL=etcd_disk
+      - /var/lib/etcddisk
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+      kind: AzureMachineTemplate
+      name: capi-workload1-control-plane
+  replicas: 1
+  version: v1.21.2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureMachineTemplate
+metadata:
+  name: capi-workload1-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      dataDisks:
+      - diskSizeGB: 256
+        lun: 0
+        nameSuffix: etcddisk
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ""
+      vmSize: Standard_D2s_v3
+---
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: MachineDeployment
+metadata:
+  name: capi-workload1-md-0
+  namespace: default
+spec:
+  clusterName: capi-workload1
+  replicas: 1
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+          kind: KubeadmConfigTemplate
+          name: capi-workload1-md-0
+      clusterName: capi-workload1
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+        kind: AzureMachineTemplate
+        name: capi-workload1-md-0
+      version: v1.21.2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureMachineTemplate
+metadata:
+  name: capi-workload1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ""
+      vmSize: Standard_D2s_v3
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+kind: KubeadmConfigTemplate
+metadata:
+  name: capi-workload1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      files:
+      - contentFrom:
+          secret:
+            key: worker-node-azure.json
+            name: capi-workload1-md-0-azure-json
+        owner: root:root
+        path: /etc/kubernetes/azure.json
+        permissions: "0644"
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            azure-container-registry-config: /etc/kubernetes/azure.json
+            cloud-config: /etc/kubernetes/azure.json
+            cloud-provider: azure
+          name: '{{ ds.meta_data["local_hostname"] }}'
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureClusterIdentity
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
+  name: cluster-identity
+  namespace: default
+spec:
+  allowedNamespaces: {}
+  clientID: 0355f30d-3667-450f-bedb-c2cc2c6d1dc5
+  clientSecret:
+    name: cluster-identity-secret
+    namespace: default
+  tenantID: 74c64ba4-0e0f-4dea-983e-881af6bf8d2c
+  type: ServicePrincipal
