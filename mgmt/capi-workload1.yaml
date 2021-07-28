@@ -162,7 +162,7 @@ metadata:
   namespace: default
 spec:
   clusterName: capi-workload1
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels: null
   template:
