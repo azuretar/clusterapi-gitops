@@ -41,6 +41,7 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
         --attach-acr "<ACRResourceId>" \
         --enable-aad --aad-admin-group-object-ids "<AdminGroupObjectId>" \
         --workspace-resource-id "<LogAnalyticsWorkspaceResourceId>" \
+        --max-pods 110 \
         --yes 
 
 ### (Management Cluster) Get AKS Management Cluster .kubeconfig Credential. Config will be merged on the ~/.kube/config file
