@@ -27,6 +27,10 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 ### (Dependencies) Install Kubernetes CLIs
     az aks install-cli
 
+### (Dependencies) Install Helm3 CLI
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    ./get_helm.sh
 ### (Management Cluster) Create AKS - Azure Kubernetes Services to install Cluster API management
     Create Azure resource Group
     az group create -l australiaeast -n capi-controlplane
