@@ -189,7 +189,7 @@ metadata:
   namespace: default
 spec:
   clusterName: azuretar-reactor-1
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels: null
   template:
