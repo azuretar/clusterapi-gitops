@@ -6,7 +6,7 @@ Slide Deck: https://www.slideshare.net/JorgeArteiro/manage-your-kubernetes-clust
 Meetup reference: https://www.meetup.com/en-AU/Microsoft-Reactor-Sydney/events/279879195
 
 Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
-### Scripts are grouped the follwing way:
+### Scripts are grouped the following way:
 
 (Dependencies) - All environment/installation scripts required.
 
@@ -31,9 +31,21 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
     curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
     chmod 700 get_helm.sh
     ./get_helm.sh
+
+
+### (Dependencies) Install/Update Extensions
+    az extension list
+
+    az upgrade  (to upgrade all installed extensions)
+
+    az extension add -n connectedk8s  or  az extension update -n connectedk8s
+
+    az extension add -n k8s-configuration  or  az extension update -n k8s-configuration
+
+    az extension add -n aks-preview  or  az extension update -n aks-preview
 ### (Management Cluster) Create AKS - Azure Kubernetes Services to install Cluster API management
-    Create Azure resource Group
-    az group create -l australiaeast -n capi-controlplane
+    Create Azure resource Group on eastus regions where GitOps preview is available
+    az group create -l eastus -n capi-controlplane
     
     Create Azure Kubernetes Services (Edit Script with your IDs)
     az aks create --resource-group capi-controlplane --name capi-controlplane \
@@ -42,27 +54,33 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
         --enable-addons monitoring,azure-policy \
         --enable-managed-identity --generate-ssh-keys \
         --vm-set-type VirtualMachineScaleSets --zones 1 2 3 --load-balancer-sku standard \
-        --attach-acr "<ACRResourceId>" \
         --enable-aad --aad-admin-group-object-ids "<AdminGroupObjectId>" \
-        --workspace-resource-id "<LogAnalyticsWorkspaceResourceId>" \
         --max-pods 110 \
         --yes 
 
 ### (Management Cluster) Get AKS Management Cluster .kubeconfig Credential. Config will be merged on the ~/.kube/config file
     az aks get-credentials --resource-group capi-controlplane --name capi-controlplane
 
-    kubectl get nodes
+    kubectl get nodes (to test connection)
 
 ### (Management Cluster) Connect AKS control plane to Azure Arc
-    az connectedk8s connect \
-        --name capi-controlplane --resource-group capi-controlplane --location australiaeast  
+    az feature register --namespace Microsoft.ContainerService --name AKS-GitOps
 
+    az provider register --namespace Microsoft.ContainerService
+
+    az provider register --namespace Microsoft.KubernetesConfiguration
+
+    az feature show --namespace Microsoft.ContainerService --name AKS-GitOps (make sure it's Registered)
+
+    az aks enable-addons -a gitops -n capi-controlplane -g capi-controlplane
+
+    az connectedk8s connect --name capi-controlplane --resource-group capi-controlplane --location eastus  
 ### (Management Cluster) Add GitOps Configuration to deploy workload cluster from YAML files, --git-path=clusters
     az k8s-configuration create \
         --name capi-controlplane --cluster-name capi-controlplane --resource-group capi-controlplane \
         --operator-instance-name capi-controlplane --operator-namespace default \
         --repository-url https://github.com/azuretar/clusterapi-gitops \
-        --scope cluster --cluster-type connectedClusters \
+        --scope cluster --cluster-type managedClusters \
         --operator-params "--git-poll-interval 3s --git-readonly --git-path=clusters/ --git-branch main"
 
 ### (Workload cluster) Edit and Run arc_capi_azure.sh bash script to Initialize CAPI control plane and create workload cluster.
@@ -82,7 +100,7 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
     Based on JumpStart https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/cluster_api/capi_azure/
 
 ### (Workload cluster) Use --kubeconfig created by Init Script to connect the workload cluster
-    kubectl --kubeconfig=./azuretar-reactor-1.kubeconfig get pods
+    kubectl --kubeconfig=./azuretar-reactor-1.kubeconfig get pods -A
 
     ps: do not push .kuconfig files to git repo. Please include *.kubeconfig in your .gitignore file
 
@@ -94,11 +112,11 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
         --scope cluster --cluster-type connectedClusters \
         --operator-params "--git-poll-interval 3s --git-readonly --git-path=workloads/ --git-branch main"
 
+    kubectl --kubeconfig=./azuretar-reactor-1.kubeconfig get pods -n default -w
 ### (Workload cluster) Install Azure Arc Extension to Azure Monitoring from az cli
     az k8s-extension create --name azuremonitor-containers --cluster-name azuretar-reactor-1 \
     --resource-group azuretar-reactor-1 \
-    --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers \
-    --configuration-settings logAnalyticsWorkspaceResourceID="<LogAnalyticsWorkspaceResourceId>" 
+    --cluster-type connectedClusters --extension-type Microsoft.AzureMonitor.Containers  
 
 ### (General) Using clusterctl commands
     clusterctl describe cluster azuretar-reactor-1
@@ -107,7 +125,7 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 
     kubectl get kubeadmcontrolplane --all-namespaces
 
-    kubectl delete cluster azuretar-reactor-1
+    kubectl delete cluster azuretar-reactor-1 (to clean up resources)
 
 ### (Reference Links)
 https://github.com/azuretar/clusterapi-gitops

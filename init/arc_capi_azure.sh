@@ -29,7 +29,7 @@ export AZURE_ENVIRONMENT="AzurePublicCloud" # Do not change!
 export KUBERNETES_VERSION="1.20.10" # Do not change!
 export CONTROL_PLANE_MACHINE_COUNT="1"
 export WORKER_MACHINE_COUNT="1"
-export AZURE_LOCATION="australiaeast" # Name of the Azure datacenter location. For example: "eastus"
+export AZURE_LOCATION="eastus" # Name of the Azure datacenter location. For example: "eastus"
 export AZURE_CONTROL_PLANE_MACHINE_TYPE="Standard_D2s_v3" # For example: "Standard_D2s_v3"
 export AZURE_NODE_MACHINE_TYPE="Standard_D2s_v3" # For example: "Standard_D4s_v3"
 
