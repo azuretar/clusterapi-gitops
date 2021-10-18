@@ -1,0 +1,262 @@
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: Cluster
+metadata:
+  labels:
+    cni: calico
+  name: azuretar-reactor-1
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+    kind: KubeadmControlPlane
+    name: azuretar-reactor-1-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    kind: AzureCluster
+    name: azuretar-reactor-1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureCluster
+metadata:
+  name: azuretar-reactor-1
+  namespace: default
+spec:
+  identityRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+    kind: AzureClusterIdentity
+    name: cluster-identity
+  location: eastus
+  networkSpec:
+    vnet:
+      name: azuretar-reactor-1-vnet
+      cidrBlocks:
+        - 10.0.0.0/16
+    subnets:
+      - name: azuretar-reactor-1-subnet-cp
+        role: control-plane
+        cidrBlocks: 
+          - 10.0.1.0/24
+        securityGroup:
+          name: azuretar-reactor-1-controlplane-nsg
+          securityRules:
+            - name: "allow_apiserver"
+              description: "Allow K8s API Server"
+              direction: "Inbound"
+              priority: 2202
+              protocol: "*"
+              destination: "*"
+              destinationPorts: "6443"
+              source: "*"
+              sourcePorts: "*"
+      - name: azuretar-reactor-1-subnet-node
+        role: node
+        cidrBlocks: 
+          - 10.0.2.0/24
+  resourceGroup: azuretar-reactor-1
+  subscriptionID: 9daa1df0-9df4-4afc-88d0-544a7f4e3cb9
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha4
+kind: KubeadmControlPlane
+metadata:
+  name: azuretar-reactor-1-control-plane
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          audit-log-maxage: "30"
+          audit-log-maxbackup: "10"
+          audit-log-maxsize: "100"
+          audit-log-path: /var/log/kube-apiserver/audit.log
+          audit-policy-file: /etc/kubernetes/audit.yaml
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        extraVolumes:
+        - hostPath: /var/log/kube-apiserver
+          mountPath: /var/log/kube-apiserver
+          name: kubeaudit
+        - hostPath: /etc/kubernetes/audit.yaml
+          mountPath: /etc/kubernetes/audit.yaml
+          name: audit-policy
+          readOnly: true
+        - hostPath: /etc/kubernetes/azure.json
+          mountPath: /etc/kubernetes/azure.json
+          name: cloud-config
+          readOnly: true
+        timeoutForControlPlane: 20m
+      controllerManager:
+        extraArgs:
+          allocate-node-cidrs: "false"
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+          cluster-name: azuretar-reactor-1
+        extraVolumes:
+        - hostPath: /etc/kubernetes/azure.json
+          mountPath: /etc/kubernetes/azure.json
+          name: cloud-config
+          readOnly: true
+      etcd:
+        local:
+          dataDir: /var/lib/etcddisk/etcd
+          extraArgs:
+            quota-backend-bytes: "8589934592"
+    diskSetup:
+      filesystems:
+      - device: /dev/disk/azure/scsi1/lun0
+        extraOpts:
+        - -E
+        - lazy_itable_init=1,lazy_journal_init=1
+        filesystem: ext4
+        label: etcd_disk
+      - device: ephemeral0.1
+        filesystem: ext4
+        label: ephemeral0
+        replaceFS: ntfs
+      partitions:
+      - device: /dev/disk/azure/scsi1/lun0
+        layout: true
+        overwrite: false
+        tableType: gpt
+    files:
+    - contentFrom:
+        secret:
+          key: control-plane-azure.json
+          name: azuretar-reactor-1-control-plane-azure-json
+      owner: root:root
+      path: /etc/kubernetes/azure.json
+      permissions: "0644"
+    - contentFrom:
+        secret:
+          key: audit.yaml
+          name: audit
+      owner: root:root
+      path: /etc/kubernetes/audit.yaml
+      permissions: "0644"
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          azure-container-registry-config: /etc/kubernetes/azure.json
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        name: '{{ ds.meta_data["local_hostname"] }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          azure-container-registry-config: /etc/kubernetes/azure.json
+          cloud-config: /etc/kubernetes/azure.json
+          cloud-provider: azure
+        name: '{{ ds.meta_data["local_hostname"] }}'
+    mounts:
+    - - LABEL=etcd_disk
+      - /var/lib/etcddisk
+    postKubeadmCommands: []
+    preKubeadmCommands: []
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+      kind: AzureMachineTemplate
+      name: azuretar-reactor-1-control-plane
+  replicas: 1
+  version: v1.21.2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureMachineTemplate
+metadata:
+  name: azuretar-reactor-1-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      dataDisks:
+      - diskSizeGB: 256
+        lun: 0
+        nameSuffix: etcddisk
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ""
+      vmSize: Standard_D2s_v3
+---
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: MachineDeployment
+metadata:
+  name: azuretar-reactor-1-md-0
+  namespace: default
+spec:
+  clusterName: azuretar-reactor-1
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+          kind: KubeadmConfigTemplate
+          name: azuretar-reactor-1-md-0
+      clusterName: azuretar-reactor-1
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+        kind: AzureMachineTemplate
+        name: azuretar-reactor-1-md-0
+      version: v1.21.2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureMachineTemplate
+metadata:
+  name: azuretar-reactor-1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ""
+      vmSize: Standard_D2s_v3
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+kind: KubeadmConfigTemplate
+metadata:
+  name: azuretar-reactor-1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      files:
+      - contentFrom:
+          secret:
+            key: worker-node-azure.json
+            name: azuretar-reactor-1-md-0-azure-json
+        owner: root:root
+        path: /etc/kubernetes/azure.json
+        permissions: "0644"
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            azure-container-registry-config: /etc/kubernetes/azure.json
+            cloud-config: /etc/kubernetes/azure.json
+            cloud-provider: azure
+          name: '{{ ds.meta_data["local_hostname"] }}'
+      preKubeadmCommands: []
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha4
+kind: AzureClusterIdentity
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
+  name: cluster-identity
+  namespace: default
+spec:
+  allowedNamespaces: {}
+  clientID: 7472d9ca-3081-48eb-9976-73cd7e288e33
+  clientSecret:
+    name: cluster-identity-secret
+    namespace: default
+  tenantID: 72f988bf-86f1-41af-91ab-2d7cd011db47
+  type: ServicePrincipal
