@@ -65,7 +65,7 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 
     kubectl get nodes (to test connection)
 
-### (Management Cluster) Connect AKS control plane to Azure Arc
+### (Management Cluster) Enable GitOps on AKS using Flux v1
     az feature register --namespace Microsoft.ContainerService --name AKS-GitOps
 
     az provider register --namespace Microsoft.ContainerService
