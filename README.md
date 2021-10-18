@@ -18,8 +18,11 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 
 (Reference Links) - Useful links to go deeper on Kubernetes Cluster API
 
+### (Dependencies) Install Azure CLI (az) 
+    curl -L https://aka.ms/InstallAzureCli | bash
+
 ### (Dependencies) Install Clusterctl
-    curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.2/clusterctl-linux-amd64 -o clusterctl
+    curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v0.4.4/clusterctl-linux-amd64 -o clusterctl
     clusterctl version
     chmod +x ./clusterctl
     sudo mv ./clusterctl /usr/local/bin/clusterctl
@@ -32,9 +35,8 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
     chmod 700 get_helm.sh
     ./get_helm.sh
 
-
 ### (Dependencies) Install/Update Extensions
-    az extension list
+    az extension list -o table
 
     az upgrade  (to upgrade all installed extensions)
 
@@ -130,11 +132,15 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 ### (Reference Links)
 https://github.com/azuretar/clusterapi-gitops
 
+https://youtu.be/jYe1Dj1oGcc (Microsoft Reactor Talk recordings for the repo)
+
 https://www.youtube.com/playlist?list=PLM4Db0UWu45LgXEwbW3PVgQ3iT77H8Bwg
 
 https://cluster-api.sigs.k8s.io/user/concepts.html
 
 https://cluster-api.sigs.k8s.io/user/quick-start.html
+
+https://capz.sigs.k8s.io/
 
 https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/cluster_api/capi_azure/
 
@@ -163,3 +169,5 @@ https://docs.microsoft.com/en-gb/azure/azure-arc/kubernetes/policy-reference
 https://github.com/Azure/arc-k8s-demo
 
 https://www.youtube.com/watch?v=hnLeAFnAJaM&t=1086s
+
+https://github.com/azuretar/clusterapi-templates
