@@ -128,6 +128,16 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
 
     kubectl delete cluster azuretar-reactor-1 (to clean up resources)
 
+### (General) Using K8s-Configuration commands
+    az k8s-configuration show --name capi-controlplane --cluster-name capi-controlplane \ 
+    --resource-group capi-controlplane --cluster-type managedClusters
+
+    az k8s-configuration list --cluster-name capi-controlplane \
+    --resource-group capi-controlplane --cluster-type managedClusters
+
+    az k8s-configuration delete --name capi-controlplane --cluster-name capi-controlplane \
+    --resource-group capi-controlplane --cluster-type managedClusters
+
 ### (Reference Links)
 https://github.com/azuretar/clusterapi-gitops
 
