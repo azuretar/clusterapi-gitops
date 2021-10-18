@@ -75,8 +75,7 @@ Follow us at https://youtube.com/AzureTar , https://AzureTar.com and  @AzureTar
     az feature show --namespace Microsoft.ContainerService --name AKS-GitOps (make sure it's Registered)
 
     az aks enable-addons -a gitops -n capi-controlplane -g capi-controlplane
-
-    az connectedk8s connect --name capi-controlplane --resource-group capi-controlplane --location eastus  
+ 
 ### (Management Cluster) Add GitOps Configuration to deploy workload cluster from YAML files, --git-path=clusters
     az k8s-configuration create \
         --name capi-controlplane --cluster-name capi-controlplane --resource-group capi-controlplane \

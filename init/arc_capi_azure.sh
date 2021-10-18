@@ -24,7 +24,7 @@ fi
 
 # Set deployment environment variables
 export CAPI_PROVIDER="azure" # Do not change!
-export CAPI_PROVIDER_VERSION="0.5.3" # Do not change!
+export CAPI_PROVIDER_VERSION="0.5.2" # Do not change!
 export AZURE_ENVIRONMENT="AzurePublicCloud" # Do not change!
 export KUBERNETES_VERSION="1.21.2" 
 export CONTROL_PLANE_MACHINE_COUNT="1"
